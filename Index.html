@@ -684,12 +684,20 @@
 
             const filename = `Receipt_${parentName.replace(/\s+/g, '_')}_${month.replace(/\s+/g, '_')}.pdf`;
 
+            // Measure the receipt's actual rendered size and build a PDF page
+            // that fits it exactly — prevents content being cut or spilling to page 2
+            const margin = 10;
+            const pdfWidth = 210; // keep A4 width (mm)
+            const contentWidthMm = pdfWidth - margin * 2;
+            const contentHeightMm = Math.ceil(receipt.offsetHeight * contentWidthMm / receipt.offsetWidth);
+            const pdfHeight = contentHeightMm + margin * 2;
+
             const opt = {
-                margin: 10,
+                margin: margin,
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
+                jsPDF: { unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' }
             };
 
             if (isIOS()) {
