@@ -30,6 +30,89 @@
             line-height: 1.6;
         }
 
+        /* ── Page loader ── */
+        .page-loader {
+            position: fixed;
+            inset: 0;
+            background: var(--color-background);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.4s ease;
+        }
+
+        .page-loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .page-loader .loader-logo {
+            max-width: 160px;
+            height: auto;
+            margin-bottom: 24px;
+            opacity: 0.85;
+        }
+
+        .loader-text {
+            color: var(--color-gray-300);
+            font-size: 14px;
+            margin-top: 14px;
+        }
+
+        /* ── Spinner (shared) ── */
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--color-border);
+            border-top-color: var(--color-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── PDF generation overlay ── */
+        .pdf-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(19, 66, 82, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .pdf-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .pdf-overlay-card {
+            background: white;
+            border-radius: 12px;
+            padding: 36px 52px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .pdf-overlay-card p {
+            color: var(--color-text);
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        /* ── Layout ── */
         .container {
             max-width: 900px;
             margin: 0 auto;
@@ -130,15 +213,39 @@
             transition: all 0.2s ease;
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
         .btn-primary {
             background: var(--color-primary);
             color: white;
             width: 100%;
             margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             background: #2a4466;
+        }
+
+        .btn-primary .btn-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        .btn-primary.loading .btn-spinner {
+            display: block;
         }
 
         .btn-secondary {
@@ -156,6 +263,7 @@
             margin-top: 24px;
         }
 
+        /* ── Receipt ── */
         .receipt {
             background: white;
             padding: 48px;
@@ -187,11 +295,6 @@
             font-size: 24px;
             font-weight: 600;
             margin-bottom: 8px;
-        }
-
-        .receipt-number {
-            color: var(--color-gray-300);
-            font-size: 14px;
         }
 
         .receipt-meta {
@@ -281,6 +384,7 @@
             line-height: 1.8;
         }
 
+        /* ── Floating download button ── */
         .print-btn {
             position: fixed;
             bottom: 32px;
@@ -302,26 +406,14 @@
             display: block;
         }
 
-        .print-btn:hover {
+        .print-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 15px 30px rgba(31, 51, 82, 0.4);
         }
 
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-
-            .form-card, .print-btn {
-                display: none !important;
-            }
-
-            .receipt {
-                box-shadow: none;
-                border: none;
-                display: block !important;
-            }
+        .print-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         @media (max-width: 768px) {
@@ -349,6 +441,22 @@
     </style>
 </head>
 <body>
+
+    <!-- Page load overlay -->
+    <div class="page-loader" id="pageLoader">
+        <img src="res/Gemini_Generated_Image_f6w4y2f6w4y2f6w4.png" alt="Ngobeni School Transport" class="loader-logo">
+        <div class="spinner"></div>
+        <p class="loader-text">Loading...</p>
+    </div>
+
+    <!-- PDF generation overlay -->
+    <div class="pdf-overlay" id="pdfOverlay">
+        <div class="pdf-overlay-card">
+            <div class="spinner"></div>
+            <p>Generating your PDF...</p>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>Receipt Generator</h1>
@@ -357,7 +465,7 @@
 
         <div class="form-card">
             <h2 style="margin-bottom: 24px; color: var(--color-primary); font-size: 20px;">Generate New Receipt</h2>
-            
+
             <div class="form-group">
                 <label class="form-label">Parent/Guardian Name</label>
                 <input type="text" class="form-control" id="parentName" placeholder="Enter parent or guardian name">
@@ -393,7 +501,10 @@
                 </select>
             </div>
 
-            <button class="btn btn-primary" onclick="generateReceipt()">Generate Receipt</button>
+            <button class="btn btn-primary" id="generateBtn" onclick="generateReceipt()">
+                <span class="btn-spinner"></span>
+                <span id="generateBtnText">Generate Receipt</span>
+            </button>
             <button class="btn btn-secondary" onclick="resetForm()" style="width: 100%;">Clear Form</button>
         </div>
 
@@ -406,19 +517,19 @@
             <div class="receipt-meta">
                 <div class="meta-item">
                     <span class="meta-label">Date Issued</span>
-                    <span class="meta-value" id="receiptDate">March 30, 2026</span>
+                    <span class="meta-value" id="receiptDate"></span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Payment For</span>
-                    <span class="meta-value" id="receiptMonth">March 2026</span>
+                    <span class="meta-value" id="receiptMonth"></span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Parent/Guardian</span>
-                    <span class="meta-value" id="receiptParent">John Doe</span>
+                    <span class="meta-value" id="receiptParent"></span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Payment Method</span>
-                    <span class="meta-value" id="receiptPaymentMethod">Cash</span>
+                    <span class="meta-value" id="receiptPaymentMethod"></span>
                 </div>
             </div>
 
@@ -447,7 +558,13 @@
 
     <script>
         let childCount = 1;
-        let receiptCounter = 1;
+
+        // Hide page loader once everything (including CDN script) is fully loaded
+        window.addEventListener('load', () => {
+            const loader = document.getElementById('pageLoader');
+            loader.classList.add('hidden');
+            setTimeout(() => { loader.style.display = 'none'; }, 400);
+        });
 
         function addChild() {
             const childrenList = document.getElementById('childrenList');
@@ -465,7 +582,7 @@
             button.parentElement.remove();
         }
 
-        function generateReceipt() {
+        async function generateReceipt() {
             const parentName = document.getElementById('parentName').value.trim();
             const paymentMonth = document.getElementById('paymentMonth').value;
             const amountPaid = parseFloat(document.getElementById('amountPaid').value);
@@ -485,9 +602,7 @@
             const children = [];
             childInputs.forEach(input => {
                 const name = input.value.trim();
-                if (name) {
-                    children.push(name);
-                }
+                if (name) children.push(name);
             });
 
             if (children.length === 0) {
@@ -506,7 +621,6 @@
             const today = new Date();
             const dateString = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-            document.getElementById('receiptNumber').textContent = `Receipt #: ${String(receiptCounter).padStart(5, '0')}`;
             document.getElementById('receiptDate').textContent = dateString;
             document.getElementById('receiptMonth').textContent = monthName;
             document.getElementById('receiptParent').textContent = parentName;
@@ -515,7 +629,7 @@
 
             const childrenDetails = document.getElementById('childrenDetails');
             childrenDetails.innerHTML = '';
-            
+
             children.forEach((child, index) => {
                 const detailRow = document.createElement('div');
                 detailRow.className = 'detail-row';
@@ -537,21 +651,34 @@
             document.getElementById('receipt').classList.add('active');
             document.getElementById('printBtn').classList.add('active');
 
-            receiptCounter++;
+            document.getElementById('receipt').scrollIntoView({ behavior: 'smooth' });
 
-            setTimeout(() => {
-                document.getElementById('receipt').scrollIntoView({ behavior: 'smooth' });
-                downloadPDF();
-            }, 300);
+            // Lock the button while PDF is generating
+            const generateBtn = document.getElementById('generateBtn');
+            const generateBtnText = document.getElementById('generateBtnText');
+            generateBtn.disabled = true;
+            generateBtn.classList.add('loading');
+            generateBtnText.textContent = 'Generating PDF...';
+
+            await downloadPDF();
+
+            generateBtn.disabled = false;
+            generateBtn.classList.remove('loading');
+            generateBtnText.textContent = 'Generate Receipt';
         }
 
-        function downloadPDF() {
+        async function downloadPDF() {
+            const pdfOverlay = document.getElementById('pdfOverlay');
+            const printBtn = document.getElementById('printBtn');
+
+            pdfOverlay.classList.add('active');
+            printBtn.disabled = true;
+
             const receipt = document.getElementById('receipt');
             const parentName = document.getElementById('receiptParent').textContent;
             const month = document.getElementById('receiptMonth').textContent;
-            const receiptNum = document.getElementById('receiptNumber').textContent.replace('Receipt #: ', '');
 
-            const filename = `Receipt_${parentName.replace(/\s+/g, '_')}_${month.replace(/\s+/g, '_')}_${receiptNum}.pdf`;
+            const filename = `Receipt_${parentName.replace(/\s+/g, '_')}_${month.replace(/\s+/g, '_')}.pdf`;
 
             const opt = {
                 margin: 10,
@@ -561,7 +688,10 @@
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            html2pdf().set(opt).from(receipt).save();
+            await html2pdf().set(opt).from(receipt).save();
+
+            pdfOverlay.classList.remove('active');
+            printBtn.disabled = false;
         }
 
         function resetForm() {
@@ -569,7 +699,7 @@
             document.getElementById('paymentMonth').value = '';
             document.getElementById('amountPaid').value = '';
             document.getElementById('paymentMethod').value = 'Cash';
-            
+
             const childrenList = document.getElementById('childrenList');
             childrenList.innerHTML = `
                 <div class="child-entry">
@@ -586,4 +716,3 @@
     </script>
 </body>
 </html>
-
