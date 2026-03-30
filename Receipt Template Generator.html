@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ngobeni School Transport - Receipt Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --color-primary: #1f3352;
+            --color-secondary: #8b2e2e;
+            --color-background: #fcfcf9;
+            --color-surface: #fffffe;
+            --color-text: #134252;
+            --color-border: rgba(94, 82, 64, 0.2);
+            --color-gray-300: #a7a9a9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-background);
+            color: var(--color-text);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: var(--color-primary);
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+
+        .header p {
+            color: var(--color-gray-300);
+            font-size: 14px;
+        }
+
+        .form-card {
+            background: var(--color-surface);
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+            margin-bottom: 32px;
+            border: 1px solid var(--color-border);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--color-text);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 15px;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            transition: border-color 0.15s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(31, 51, 82, 0.1);
+        }
+
+        .children-list {
+            margin-top: 16px;
+        }
+
+        .child-entry {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .child-entry input {
+            flex: 1;
+        }
+
+        .btn-remove {
+            padding: 8px 16px;
+            background: rgba(192, 21, 47, 0.1);
+            color: var(--color-secondary);
+            border: 1px solid rgba(192, 21, 47, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-remove:hover {
+            background: rgba(192, 21, 47, 0.15);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary:hover {
+            background: #2a4466;
+        }
+
+        .btn-secondary {
+            background: rgba(94, 82, 64, 0.12);
+            color: var(--color-text);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(94, 82, 64, 0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .receipt {
+            background: white;
+            padding: 48px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--color-border);
+            display: none;
+        }
+
+        .receipt.active {
+            display: block;
+        }
+
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        .receipt-logo {
+            max-width: 300px;
+            height: auto;
+            margin-bottom: 16px;
+        }
+
+        .receipt-title {
+            color: var(--color-primary);
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .receipt-number {
+            color: var(--color-gray-300);
+            font-size: 14px;
+        }
+
+        .receipt-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 32px;
+            padding: 20px;
+            background: var(--color-background);
+            border-radius: 8px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: var(--color-gray-300);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .receipt-details {
+            margin-bottom: 32px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .detail-value {
+            color: var(--color-text);
+        }
+
+        .receipt-total {
+            background: var(--color-primary);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+        }
+
+        .total-label {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .total-amount {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .receipt-footer {
+            margin-top: 40px;
+            text-align: center;
+            padding-top: 24px;
+            border-top: 2px solid var(--color-border);
+        }
+
+        .footer-text {
+            color: var(--color-gray-300);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .print-btn {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            padding: 14px 28px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(31, 51, 82, 0.3);
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        .print-btn.active {
+            display: block;
+        }
+
+        .print-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(31, 51, 82, 0.4);
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .form-card, .print-btn {
+                display: none !important;
+            }
+
+            .receipt {
+                box-shadow: none;
+                border: none;
+                display: block !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .receipt {
+                padding: 24px;
+            }
+
+            .receipt-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .print-btn {
+                bottom: 16px;
+                right: 16px;
+            }
+
+            .child-entry {
+                flex-direction: column;
+            }
+
+            .child-entry input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Receipt Generator</h1>
+            <p>Ngobeni School Transport</p>
+        </div>
+
+        <div class="form-card">
+            <h2 style="margin-bottom: 24px; color: var(--color-primary); font-size: 20px;">Generate New Receipt</h2>
+            
+            <div class="form-group">
+                <label class="form-label">Parent/Guardian Name</label>
+                <input type="text" class="form-control" id="parentName" placeholder="Enter parent or guardian name">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Month of Payment</label>
+                <input type="month" class="form-control" id="paymentMonth">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Children</label>
+                <div class="children-list" id="childrenList">
+                    <div class="child-entry">
+                        <input type="text" class="form-control" placeholder="Child's name" data-child-index="0">
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="addChild()" style="margin-top: 12px;">+ Add Another Child</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount Paid (R)</label>
+                <input type="number" class="form-control" id="amountPaid" placeholder="0.00" step="0.01" min="0">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Payment Method</label>
+                <select class="form-control" id="paymentMethod">
+                    <option value="Cash">Cash</option>
+                    <option value="EFT">EFT</option>
+                    <option value="Card">Card</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" onclick="generateReceipt()">Generate Receipt</button>
+            <button class="btn btn-secondary" onclick="resetForm()" style="width: 100%;">Clear Form</button>
+        </div>
+
+        <div class="receipt" id="receipt">
+            <div class="receipt-header">
+                <img src="res/Gemini_Generated_Image_f6w4y2f6w4y2f6w4.png" alt="Ngobeni School Transport" class="receipt-logo">
+                <div class="receipt-title">PAYMENT RECEIPT</div>
+                <div class="receipt-number" id="receiptNumber">Receipt #: 00001</div>
+            </div>
+
+            <div class="receipt-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Date Issued</span>
+                    <span class="meta-value" id="receiptDate">March 30, 2026</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Payment For</span>
+                    <span class="meta-value" id="receiptMonth">March 2026</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Parent/Guardian</span>
+                    <span class="meta-value" id="receiptParent">John Doe</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Payment Method</span>
+                    <span class="meta-value" id="receiptPaymentMethod">Cash</span>
+                </div>
+            </div>
+
+            <div class="receipt-details">
+                <h3 style="margin-bottom: 16px; color: var(--color-primary); font-size: 16px;">Payment Details</h3>
+                <div id="childrenDetails"></div>
+            </div>
+
+            <div class="receipt-total">
+                <span class="total-label">Total Amount Paid</span>
+                <span class="total-amount" id="receiptTotal">R 0.00</span>
+            </div>
+
+            <div class="receipt-footer">
+                <p class="footer-text">
+                    Thank you for your payment.<br>
+                    For queries, please contact Ngobeni School Transport.<br>
+                    <strong>Keep this receipt for your records.</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <button class="print-btn" id="printBtn" onclick="downloadPDF()">
+        ⬇️ Download PDF
+    </button>
+
+    <script>
+        let childCount = 1;
+        let receiptCounter = 1;
+
+        function addChild() {
+            const childrenList = document.getElementById('childrenList');
+            const childEntry = document.createElement('div');
+            childEntry.className = 'child-entry';
+            childEntry.innerHTML = `
+                <input type="text" class="form-control" placeholder="Child's name" data-child-index="${childCount}">
+                <button class="btn-remove" onclick="removeChild(this)">Remove</button>
+            `;
+            childrenList.appendChild(childEntry);
+            childCount++;
+        }
+
+        function removeChild(button) {
+            button.parentElement.remove();
+        }
+
+        function generateReceipt() {
+            const parentName = document.getElementById('parentName').value.trim();
+            const paymentMonth = document.getElementById('paymentMonth').value;
+            const amountPaid = parseFloat(document.getElementById('amountPaid').value);
+            const paymentMethod = document.getElementById('paymentMethod').value;
+
+            if (!parentName) {
+                alert('Please enter parent/guardian name');
+                return;
+            }
+
+            if (!paymentMonth) {
+                alert('Please select payment month');
+                return;
+            }
+
+            const childInputs = document.querySelectorAll('[data-child-index]');
+            const children = [];
+            childInputs.forEach(input => {
+                const name = input.value.trim();
+                if (name) {
+                    children.push(name);
+                }
+            });
+
+            if (children.length === 0) {
+                alert('Please enter at least one child name');
+                return;
+            }
+
+            if (!amountPaid || amountPaid <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
+
+            const monthDate = new Date(paymentMonth + '-01');
+            const monthName = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const today = new Date();
+            const dateString = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+            document.getElementById('receiptNumber').textContent = `Receipt #: ${String(receiptCounter).padStart(5, '0')}`;
+            document.getElementById('receiptDate').textContent = dateString;
+            document.getElementById('receiptMonth').textContent = monthName;
+            document.getElementById('receiptParent').textContent = parentName;
+            document.getElementById('receiptPaymentMethod').textContent = paymentMethod;
+            document.getElementById('receiptTotal').textContent = `R ${amountPaid.toFixed(2)}`;
+
+            const childrenDetails = document.getElementById('childrenDetails');
+            childrenDetails.innerHTML = '';
+            
+            children.forEach((child, index) => {
+                const detailRow = document.createElement('div');
+                detailRow.className = 'detail-row';
+                detailRow.innerHTML = `
+                    <span class="detail-label">Child ${index + 1}</span>
+                    <span class="detail-value">${child}</span>
+                `;
+                childrenDetails.appendChild(detailRow);
+            });
+
+            const amountRow = document.createElement('div');
+            amountRow.className = 'detail-row';
+            amountRow.innerHTML = `
+                <span class="detail-label">School Transport - ${monthName}</span>
+                <span class="detail-value">R ${amountPaid.toFixed(2)}</span>
+            `;
+            childrenDetails.appendChild(amountRow);
+
+            document.getElementById('receipt').classList.add('active');
+            document.getElementById('printBtn').classList.add('active');
+
+            receiptCounter++;
+
+            setTimeout(() => {
+                document.getElementById('receipt').scrollIntoView({ behavior: 'smooth' });
+                downloadPDF();
+            }, 300);
+        }
+
+        function downloadPDF() {
+            const receipt = document.getElementById('receipt');
+            const parentName = document.getElementById('receiptParent').textContent;
+            const month = document.getElementById('receiptMonth').textContent;
+            const receiptNum = document.getElementById('receiptNumber').textContent.replace('Receipt #: ', '');
+
+            const filename = `Receipt_${parentName.replace(/\s+/g, '_')}_${month.replace(/\s+/g, '_')}_${receiptNum}.pdf`;
+
+            const opt = {
+                margin: 10,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(receipt).save();
+        }
+
+        function resetForm() {
+            document.getElementById('parentName').value = '';
+            document.getElementById('paymentMonth').value = '';
+            document.getElementById('amountPaid').value = '';
+            document.getElementById('paymentMethod').value = 'Cash';
+            
+            const childrenList = document.getElementById('childrenList');
+            childrenList.innerHTML = `
+                <div class="child-entry">
+                    <input type="text" class="form-control" placeholder="Child's name" data-child-index="0">
+                </div>
+            `;
+            childCount = 1;
+
+            document.getElementById('receipt').classList.remove('active');
+            document.getElementById('printBtn').classList.remove('active');
+        }
+
+        document.getElementById('paymentMonth').valueAsDate = new Date();
+    </script>
+</body>
+</html>
+
