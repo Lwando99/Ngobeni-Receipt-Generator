@@ -667,6 +667,10 @@
             generateBtnText.textContent = 'Generate Receipt';
         }
 
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+
         async function downloadPDF() {
             const pdfOverlay = document.getElementById('pdfOverlay');
             const printBtn = document.getElementById('printBtn');
@@ -688,7 +692,15 @@
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            await html2pdf().set(opt).from(receipt).save();
+            if (isIOS()) {
+                // iOS Safari blocks blob downloads — open in new tab so the
+                // user can save/share via Safari's built-in PDF viewer
+                const pdfBlob = await html2pdf().set(opt).from(receipt).outputPdf('blob');
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                window.open(blobUrl, '_blank');
+            } else {
+                await html2pdf().set(opt).from(receipt).save();
+            }
 
             pdfOverlay.classList.remove('active');
             printBtn.disabled = false;
