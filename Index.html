@@ -693,11 +693,13 @@
             };
 
             if (isIOS()) {
-                // iOS Safari blocks blob downloads — open in new tab so the
-                // user can save/share via Safari's built-in PDF viewer
+                // Open the tab synchronously first — iOS (Safari & Chrome) blocks
+                // window.open() called after an await as it's no longer a direct
+                // user gesture. We then navigate it to the blob URL once ready.
+                const newTab = window.open('', '_blank');
                 const pdfBlob = await html2pdf().set(opt).from(receipt).outputPdf('blob');
                 const blobUrl = URL.createObjectURL(pdfBlob);
-                window.open(blobUrl, '_blank');
+                newTab.location.href = blobUrl;
             } else {
                 await html2pdf().set(opt).from(receipt).save();
             }
