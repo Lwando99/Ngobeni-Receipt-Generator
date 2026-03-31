@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ngobeni School Transport - Receipt Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --color-primary: #1f3352;
@@ -678,43 +679,41 @@
             pdfOverlay.classList.add('active');
             printBtn.disabled = true;
 
+            // Open iOS tab synchronously before any await — popup blocker kills
+            // window.open() once we're past the first async boundary
+            const iosTab = isIOS() ? window.open('', '_blank') : null;
+
             const receipt = document.getElementById('receipt');
             const parentName = document.getElementById('receiptParent').textContent;
             const month = document.getElementById('receiptMonth').textContent;
-
             const filename = `Receipt_${parentName.replace(/\s+/g, '_')}_${month.replace(/\s+/g, '_')}.pdf`;
 
-            // Measure the receipt's actual rendered size and build a PDF page
-            // that fits it exactly — prevents content being cut or spilling to page 2
-            const margin = 10;
-            const pdfWidth = 210; // keep A4 width (mm)
-            const contentWidthMm = pdfWidth - margin * 2;
-            const contentHeightMm = Math.ceil(receipt.offsetHeight * contentWidthMm / receipt.offsetWidth);
-            const pdfHeight = contentHeightMm + margin * 2;
+            // Render the receipt to a canvas — this gives us the exact pixel
+            // dimensions so we can size the PDF page to fit perfectly every time.
+            // scale:1 on iOS to stay within Safari's canvas size limit.
+            const canvas = await html2canvas(receipt, {
+                scale: isIOS() ? 1 : 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+            });
 
-            // iOS Safari has a hard canvas size limit — scale:2 on a high-DPR iPhone
-            // hits it and silently clips the output on the right and bottom.
-            // Scale:1 still renders cleanly at the device's native DPR.
-            const canvasScale = isIOS() ? 1 : 2;
+            // Build a PDF whose page is sized to the canvas aspect ratio at A4 width.
+            // Height is derived from the actual rendered canvas — no guessing, no splitting.
+            const margin = 10; // mm
+            const pdfWidth = 210; // A4 width in mm
+            const contentWidth = pdfWidth - margin * 2;
+            const contentHeight = (canvas.height / canvas.width) * contentWidth;
+            const pdfHeight = contentHeight + margin * 2;
 
-            const opt = {
-                margin: margin,
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: canvasScale, useCORS: true, allowTaint: true, logging: false },
-                jsPDF: { unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' }
-            };
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pdfWidth, pdfHeight] });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, contentWidth, contentHeight);
 
-            if (isIOS()) {
-                // Open the tab synchronously first — iOS (Safari & Chrome) blocks
-                // window.open() called after an await as it's no longer a direct
-                // user gesture. We then navigate it to the blob URL once ready.
-                const newTab = window.open('', '_blank');
-                const pdfBlob = await html2pdf().set(opt).from(receipt).outputPdf('blob');
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                newTab.location.href = blobUrl;
+            if (iosTab) {
+                iosTab.location.href = URL.createObjectURL(pdf.output('blob'));
             } else {
-                await html2pdf().set(opt).from(receipt).save();
+                pdf.save(filename);
             }
 
             pdfOverlay.classList.remove('active');
