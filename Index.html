@@ -684,17 +684,12 @@
 
             const filename = `Receipt_${parentName.replace(/\s+/g, '_')}_${month.replace(/\s+/g, '_')}.pdf`;
 
-            // Use scrollWidth/scrollHeight to capture full content including any overflow.
-            // offsetWidth/Height can miss content on iOS when the viewport is narrow.
-            const receiptWidth  = receipt.scrollWidth;
-            const receiptHeight = receipt.scrollHeight;
-
             // Measure the receipt's actual rendered size and build a PDF page
             // that fits it exactly — prevents content being cut or spilling to page 2
             const margin = 10;
             const pdfWidth = 210; // keep A4 width (mm)
             const contentWidthMm = pdfWidth - margin * 2;
-            const contentHeightMm = Math.ceil(receiptHeight * contentWidthMm / receiptWidth);
+            const contentHeightMm = Math.ceil(receipt.offsetHeight * contentWidthMm / receipt.offsetWidth);
             const pdfHeight = contentHeightMm + margin * 2;
 
             // iOS Safari has a hard canvas size limit — scale:2 on a high-DPR iPhone
@@ -706,17 +701,7 @@
                 margin: margin,
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: canvasScale,
-                    useCORS: true,
-                    allowTaint: true,
-                    logging: false,
-                    width: receiptWidth,
-                    height: receiptHeight,
-                    windowWidth: receiptWidth,
-                    scrollX: 0,
-                    scrollY: 0
-                },
+                html2canvas: { scale: canvasScale, useCORS: true, allowTaint: true, logging: false },
                 jsPDF: { unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' }
             };
 
